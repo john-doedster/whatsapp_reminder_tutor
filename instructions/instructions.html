@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Инструкция по установке</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h3 { color: #007acc; }
+        ol { line-height: 1.6; }
+        code { background: #f4f4f4; padding: 2px 5px; }
+    </style>
+</head>
+<body>
+    <h2>Инструкция по получению credentials.json</h2>
+    
+    <h3>1. Создайте проект в Google Cloud Console</h3>
+    <ol>
+        <li>Перейдите на <a href="https://console.cloud.google.com/">Google Cloud Console</a></li>
+        <li>Нажмите "Create Project"</li>
+        <li>Назовите проект "WhatsApp Reminder"</li>
+    </ol>
+
+    <h3>2. Включите Google Calendar API</h3>
+    <ol>
+        <li>В меню слева выберите "APIs & Services" → "Library"</li>
+        <li>В поиске найдите "Google Calendar API"</li>
+        <li>Нажмите "Enable" (Включить)</li>
+    </ol>
+
+    <h3>3. Создайте учетные данные</h3>
+    <ol>
+        <li>Перейдите в "APIs & Services" → "Credentials"</li>
+        <li>Нажмите "Create Credentials" → "OAuth Client ID"</li>
+        <li>Выберите "Desktop application"</li>
+        <li>Введите название: "WhatsApp Reminder"</li>
+    </ol>
+
+    <h3>4. Скачайте и настройте файл</h3>
+    <ol>
+        <li>Скачайте JSON-файл (иконка скачивания)</li>
+        <li>Переименуйте файл в <code>credentials.json</code></li>
+        <li>Положите файл в папку с программой</li>
+    </ol>
+
+    <h3>5. Добавьте себя в тестовые пользователи</h3>
+    <ol>
+        <li>В "APIs & Services" → "OAuth consent screen"</li>
+        <li>В разделе "Test users" добавьте ваш email</li>
+        <li>Сохраните изменения</li>
+    </ol>
+
+    <p><strong>Готово! Теперь можно запускать программу.</strong></p>
+</body>
+</html>
