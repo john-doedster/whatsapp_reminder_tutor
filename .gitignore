@@ -1,6 +1,8 @@
 credentials.json
 token.json
 *.env
+*.ini
+*.exe
 
 # Данные пользователей
 /data/
