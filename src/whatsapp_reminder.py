@@ -1,10 +1,14 @@
+import os
+import sys
+from path_config import PATHS
+from contacts_manager import ContactsManager
 import json
 import re
 import datetime
 import time
 from datetime import timezone
 from urllib.parse import quote
-
+from io import StringIO
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -17,39 +21,66 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 import os.path
 
+
+contacts_manager = ContactsManager(PATHS['contacts'])
+
+def capture_output(func):
+    """Декоратор для перехвата вывода консоли"""
+    def wrapper(*args, **kwargs):
+        # Если вывод уже перехвачен (значит запущено из GUI), не делаем ничего
+        if not isinstance(sys.stdout, StringIO):
+            return func(*args, **kwargs)
+        
+        # Сохраняем оригинальный stdout
+        old_stdout = sys.stdout
+        result = func(*args, **kwargs)
+        # Восстанавливаем stdout
+        sys.stdout = old_stdout
+        return result
+    return wrapper
+
 # ===== НАСТРОЙКИ =====
 REMIND_BEFORE_HOURS = 24  # За сколько часов напоминать
 CALENDAR_ID = 'primary'   # ID вашего календаря (обычно 'primary' для основного)
 WHATSPP_SCAN_TIMEOUT = 60 # Секунд на сканирование QR-кода WhatsApp
 # =====================
 
-# Функция загрузки контактов
-def load_contacts():
-    try:
-        with open('contacts.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('ученики', {})
-    except FileNotFoundError:
-        print("Файл contacts.json не найден. Создайте файл с контактами.")
-        return {}
-    except json.JSONDecodeError:
-        print("Ошибка в формате contacts.json. Проверьте файл.")
-        return {}
+# # Функция загрузки контактов
+# def load_contacts():
+#     try:
+#         with open('contacts.json', 'r', encoding='utf-8') as f:
+#             data = json.load(f)
+#             return data.get('ученики', {})
+#     except FileNotFoundError:
+#         print("Файл contacts.json не найден. Создайте файл с контактами.")
+#         return {}
+#     except json.JSONDecodeError:
+#         print("Ошибка в формате contacts.json. Проверьте файл.")
+#         return {}
 
 # Функция для авторизации в Google Calendar API
 def get_calendar_service():
     SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    
+    # Используйте PATHS для token.json тоже
+    token_path = PATHS['token']
+    credentials_path = PATHS['credentials']
+    
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+    
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
+        
+        # Сохраняем в правильный путь
+        with open(token_path, 'w') as token:
             token.write(creds.to_json())
+    
     return build('calendar', 'v3', credentials=creds)
 
 # Функция для получения событий из календаря
@@ -121,14 +152,21 @@ def send_whatsapp_message(phone_number, message):
             driver.quit()
 
 # Главная функция
+@capture_output
 def main():
     print("Запуск скрипта напоминаний...")
     
-    # Загружаем контакты при запуске
-    contacts = load_contacts()
-    if not contacts:
+    # # Загружаем контакты при запуске
+    # contacts = load_contacts()
+    # if not contacts:
+    #     print("Не удалось загрузить контакты. Проверьте файл contacts.json")
+    #     return
+
+    if not contacts_manager.contacts:
         print("Не удалось загрузить контакты. Проверьте файл contacts.json")
         return
+    
+    print(f"Загружено контактов: {len(contacts_manager.contacts)}")
     
     # Получаем события из календаря
     service = get_calendar_service()
@@ -158,9 +196,8 @@ def main():
             student_name = event_summary
             
             if student_name:
-                # Ищем номер в базе контактов
-                student_key = student_name.lower().strip()
-                phone_number = contacts.get(student_key)
+                # Ищем номер через contacts_manager
+                phone_number = contacts_manager.get_phone(student_name)
                 
                 if phone_number:
                     # Проверяем дублирование
@@ -170,8 +207,9 @@ def main():
                     
                     processed_numbers.add(phone_number)
                     
-                    # Формируем сообщение
-                    message = f"Привет! Напоминаю, что {start_time.strftime('%d.%m')} в {start_time.strftime('%H:%M')} у нас занятие. Жду вас! 🎓"
+                    # Формируем и отправляем сообщение
+                    message = f"Добрый день! Напоминаем, что {start_time.strftime('%d.%m')} в {start_time.strftime('%H:%M')} у нас занятие. Жду вас! 🎓"
+                    from urllib.parse import quote
                     message_encoded = quote(message)
                     
                     print(f"Найдено событие для: {student_name}. Телефон: {phone_number}")
